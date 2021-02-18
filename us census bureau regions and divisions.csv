@@ -1,0 +1,52 @@
+State,State Code,Region,Division,ISO
+Alaska,AK,West,Pacific,Northwest
+Alabama,AL,South,East South Central,Southeast
+Arkansas,AR,South,West South Central,MISO
+Arizona,AZ,West,Mountain,Southwest
+California,CA,West,Pacific,CAISO
+Colorado,CO,West,Mountain,Southwest
+Connecticut,CT,Northeast,New England,ISO-NE
+District of Columbia,DC,South,South Atlantic
+Delaware,DE,South,South Atlantic,PJM
+Florida,FL,South,South Atlantic,Southeast
+Georgia,GA,South,South Atlantic,Southeas
+Hawaii,HI,West,Pacific,None
+Iowa,IA,Midwest,West North Central,MISO
+Idaho,ID,West,Mountain,Northwest
+Illinois,IL,Midwest,East North Central,MISO
+Indiana,IN,Midwest,East North Central,MISO
+Kansas,KS,Midwest,West North Central,SPP
+Kentucky,KY,South,East South Central,PJM
+Louisiana,LA,South,West South Central,MISO
+Massachusetts,MA,Northeast,New England,ISO-NE
+Maryland,MD,South,South Atlantic,PJM
+Maine,ME,Northeast,New England,ISO-NE
+Michigan,MI,Midwest,East North Central,MISO
+Minnesota,MN,Midwest,West North Central,MISO
+Missouri,MO,Midwest,West North Central,MISO
+Mississippi,MS,South,East South Central,MISO
+Montana,MT,West,Mountain,Northwest
+North Carolina,NC,South,South Atlantic,Southeast
+North Dakota,ND,Midwest,West North Central,MISO
+Nebraska,NE,Midwest,West North Central,SPP
+New Hampshire,NH,Northeast,New England,ISO-NE
+New Jersey,NJ,Northeast,Middle Atlantic,PJM
+New Mexico,NM,West,Mountain,Southwest
+Nevada,NV,West,Mountain,Northwest
+New York,NY,Northeast,Middle Atlantic,NYISO
+Ohio,OH,Midwest,East North Central,PJM
+Oklahoma,OK,South,West South Central,SPP
+Oregon,OR,West,Pacific,Northwest
+Pennsylvania,PA,Northeast,Middle Atlantic,PJM
+Rhode Island,RI,Northeast,New England,ISO-NE
+South Carolina,SC,South,South Atlantic,Southeast
+South Dakota,SD,Midwest,West North Central,SPP
+Tennessee,TN,South,East South Central,Southeast
+Texas,TX,South,West South Central,ERCOT
+Utah,UT,West,Mountain,Northwest
+Virginia,VA,South,South Atlantic,PJM
+Vermont,VT,Northeast,New England,ISO-NE
+Washington,WA,West,Pacific
+Wisconsin,WI,Midwest,East North Central,MISO
+West Virginia,WV,South,South Atlantic,PJM
+Wyoming,WY,West,Mountain,Northwest
