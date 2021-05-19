@@ -22,6 +22,7 @@ nsrdbfetcher = tools.FetchResourceFiles(
 
 elasticity_table = {}
 regional_elasticities = {}
+electricity_rates = {}
 with open('short-run price elasticities for the residential electricity market.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
@@ -32,6 +33,14 @@ with open('us census bureau regions and divisions.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         elasticity_table[row['State']] = regional_elasticities[row['Division']]
+
+with open('us electricity rates.csv') as csvfile:
+    # https://www.eia.gov/electricity/state/
+    #'Name', 'Average retail price (cents/kWh)', 'Net summer capacity (MW)', 'Net generation (MWh)', 'Total retail sales (MWh)'
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        # convert cents per kWh to dollars per kWh
+        electricity_rates[row['Name']] = float(row['Average retail price (cents/kWh)'])/100
 
 try:
     with open('locations.json', 'r') as jsonfile:
@@ -60,9 +69,9 @@ def modify_load(state, estimated_load, rates):
     demand_modifier = 1
     modified_load = []
     for hr, rate in zip(estimated_load, rates):
-        delta_rate = ((rate - prev_rate)/prev_rate)
-        if delta_rate:
-            demand_modifier = 1+delta_rate*elasticity
+        pct_change = ((rate - prev_rate)/prev_rate)
+        if pct_change:
+            demand_modifier = 1+pct_change*elasticity
         prev_rate = rate
 
         demand = demand_modifier*hr
@@ -77,18 +86,11 @@ def modify_solar_load(state, estimated_load, generated, rates):
     demand_modifier = 1
     modified_load = []
     for hr_load, gen, rate in zip(estimated_load, generated, rates):
-        delta_rate = ((rate - prev_rate)/prev_rate)
-        if delta_rate:
-            demand_modifier = 1+delta_rate*elasticity
+        pct_chage = ((rate - prev_rate)/prev_rate)
+        if pct_chage:
+            demand_modifier = 1+pct_chage*elasticity
         prev_rate = rate
-
-        demand = hr_load
-        excess_demand = hr_load - gen
-        # if demand is more than system generated reduce grid supplied energy by price
-        if excess_demand > 0:
-            excess_demand = demand_modifier*excess_demand
-            # add back generated energy for SAM's other calculations
-            demand = excess_demand + gen
+        demand = demand_modifier*hr_load
         modified_load.append(demand)
     return modified_load
 
@@ -122,6 +124,9 @@ class Location():
     city = None
     state = None
     resource_file_path = None
+    base_rate = 0.0
+    peak_rate = 0.0
+    off_peak_rate = 0.0
 
     def __repr__(self):
         return "<Location: %s, %s, %s, %s" % (self.loc_id, self.city, self.state, self.resource_file_path)
@@ -144,6 +149,10 @@ class Location():
                 self.state = location['address']['state']
             if 'city' in location['address']:
                 self.city = location['address']['city']
+        if self.state in electricity_rates:
+            self.base_rate = electricity_rates[self.state]
+            self.peak_rate = 1.5*self.base_rate
+            self.off_peak_rate = 0.5*self.base_rate
 
 def load_location(lon, lat):
     lon_lats = [(lon, lat)]

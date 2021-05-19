@@ -12,7 +12,7 @@ TODO:
 from tabulate import tabulate
 
 from utils import load_location, elasticity_table
-from SystemAnalysis import SystemAnalysis, SolarSystemAnalysis, SolarBatterySystemAnalysis
+from SystemAnalysis import BaseSystemAnalysis, SolarSystemAnalysis, SolarBatterySystemAnalysis
 
 #How things are – net metering makes consumer indifferent
 #	Static price
@@ -22,10 +22,8 @@ from SystemAnalysis import SystemAnalysis, SolarSystemAnalysis, SolarBatterySyst
 locations = [load_location("-92.328594", "38.951551")]
 model_name = "PVWattsResidential"
 #weather_file = "/Users/justinhohner/SAM Downloaded Weather Files/columbia_mo_38.951551_-92.328594_psm3-tmy_60_tmy.csv"
-
 ran = 0
 for location in locations:
-    #print(location.state)
     if location.state not in elasticity_table:
         print("skipping %s" % location.state)
         continue
@@ -33,24 +31,24 @@ for location in locations:
         break
     else:
         ran += 1
-    systemanalysis = SystemAnalysis(location)
+    basesystemanalysis = BaseSystemAnalysis(location)
     solarsystemanalysis = SolarSystemAnalysis(location)
-    solarbatterysystemanalysis = SolarBatterySystemAnalysis(location)
+    #solarbatterysystemanalysis = SolarBatterySystemAnalysis(location)
 
     table = []
     table.append(['', 'annual energy', 'capital_cost', 'nominal_lcoe',
                   'real_lcoe', 'npv', 'full_demand_cost'])
-    table.append(systemanalysis.run_static_analysis())
+    table.append(basesystemanalysis.run_static_analysis())
     table.append(solarsystemanalysis.run_static_analysis())
-    table.append(solarbatterysystemanalysis.run_static_analysis())
+    #table.append(solarbatterysystemanalysis.run_static_analysis())
 
-    table.append(systemanalysis.run_tou_analysis())
+    table.append(basesystemanalysis.run_tou_analysis())
     table.append(solarsystemanalysis.run_tou_analysis())
-    table.append(solarbatterysystemanalysis.run_tou_analysis())
+    #table.append(solarbatterysystemanalysis.run_tou_analysis())
 
-    table.append(systemanalysis.run_rtp_analysis())
+    table.append(basesystemanalysis.run_rtp_analysis())
     table.append(solarsystemanalysis.run_rtp_analysis())
-    table.append(solarbatterysystemanalysis.run_rtp_analysis())
+    #table.append(solarbatterysystemanalysis.run_rtp_analysis())
     print(tabulate(table))
 
 """
