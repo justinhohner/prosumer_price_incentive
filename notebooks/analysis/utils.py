@@ -1,6 +1,8 @@
 
 import os
 import csv
+import requests
+from contextlib import closing
 import json
 from datetime import date, datetime, timedelta
 
@@ -9,7 +11,7 @@ from geopy.geocoders import Nominatim
 import urllib3
 urllib3.disable_warnings()
 
-import ResourceTools as tools
+import analysis.ResourceTools as tools
 
 #https://github.com/NREL/pysam/blob/master/Examples/FetchResourceFileExample.py
 nrel_api_key = os.getenv("NREL_API_KEY")
@@ -23,18 +25,19 @@ nsrdbfetcher = tools.FetchResourceFiles(
 elasticity_table = {}
 regional_elasticities = {}
 electricity_rates = {}
-with open('short-run price elasticities for the residential electricity market.csv') as csvfile:
+# TODO move files and create functions
+with open('data/short-run price elasticities for the residential electricity market.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         regional_elasticities[row['Division']] = float(row['elasticity'])
 
-with open('us census bureau regions and divisions.csv') as csvfile:
+with open('data/us census bureau regions and divisions.csv') as csvfile:
     #State,State Code,Region,Division
     reader = csv.DictReader(csvfile)
     for row in reader:
         elasticity_table[row['State']] = regional_elasticities[row['Division']]
 
-with open('us electricity rates.csv') as csvfile:
+with open('data/us electricity rates.csv') as csvfile:
     # https://www.eia.gov/electricity/state/
     #'Name', 'Average retail price (cents/kWh)', 'Net summer capacity (MW)', 'Net generation (MWh)', 'Total retail sales (MWh)'
     reader = csv.DictReader(csvfile)
@@ -43,7 +46,7 @@ with open('us electricity rates.csv') as csvfile:
         electricity_rates[row['Name']] = float(row['Average retail price (cents/kWh)'])/100
 
 try:
-    with open('locations.json', 'r') as jsonfile:
+    with open('data/locations.json', 'r') as jsonfile:
         LOCATIONS = json.load(jsonfile)
 except FileNotFoundError:
     LOCATIONS = {}
@@ -80,20 +83,6 @@ def modify_load(state, estimated_load, rates):
         modified_load.append(demand)
     return modified_load
 
-def modify_solar_load(state, estimated_load, generated, rates):
-    prev_rate = rates[0]
-    elasticity = elasticity_table[state]
-    demand_modifier = 1
-    modified_load = []
-    for hr_load, gen, rate in zip(estimated_load, generated, rates):
-        pct_chage = ((rate - prev_rate)/prev_rate)
-        if pct_chage:
-            demand_modifier = 1+pct_chage*elasticity
-        prev_rate = rate
-        demand = demand_modifier*hr_load
-        modified_load.append(demand)
-    return modified_load
-
 def modify_battery_load(state, estimated_load, grid_load, rates):
     prev_rate = rates[0]
     elasticity = elasticity_table[state]
@@ -115,6 +104,9 @@ def modify_battery_load(state, estimated_load, grid_load, rates):
             demand = excess_demand + gen
         modified_load.append(demand)
     return modified_load
+
+class BadLocationResponse(Exception):
+    pass
 
 class BadLocation(Exception):
     pass
@@ -168,15 +160,11 @@ def load_location(lon, lat):
 def load_locations():
     lon_lats = []
     locations = []
-    lim = 0
-    with open('stations.csv', 'r') as csvfile:
+    #'https://www2.census.gov/geo/docs/reference/cenpop2010/CenPop2010_Mean_ST.txt'
+    with open('data/CenPop2010_Mean_ST.txt', 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            #if lim >= 250:
-            #    break
-            #lon_lats.append((row['longitude'], row['latitude']))
-            #lim += 1
-            lon_lats = [(row['longitude'], row['latitude'])]
+            lon_lats = [(row['LONGITUDE'], row['LATITUDE'])]
             locs = nsrdbfetcher.fetch(lon_lats)
             for loc in locs.resource_file_paths:
                 try:
@@ -184,12 +172,6 @@ def load_locations():
                 except BadLocation:
                     pass
     return locations
-
-def datespan(startDate, endDate, delta=timedelta(hours=1)):
-    currentDate = startDate
-    while currentDate < endDate:
-        yield currentDate
-        currentDate += delta
 
 def gen_buy_rate_seq(tou_table, ur_ec_tou_mat):
     # 6 columns period, tier, max usage, max usage units, buy, sell
@@ -204,7 +186,7 @@ def gen_buy_rate_seq(tou_table, ur_ec_tou_mat):
 
 def get_rtp_seq():
     rates = []
-    with open('columbia_lmp.csv', 'r') as csvfile:
+    with open('data/columbia_lmp.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             # rates are in MWh convert to kWh
