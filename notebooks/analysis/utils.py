@@ -113,6 +113,7 @@ class BadLocation(Exception):
 
 class Location():
     loc_id = None
+    iso = None
     city = None
     state = None
     resource_file_path = None
@@ -121,11 +122,17 @@ class Location():
     off_peak_rate = 0.0
 
     def __repr__(self):
-        return "<Location: %s, %s, %s, %s" % (self.loc_id, self.city, self.state, self.resource_file_path)
+        return "<Location: %s, %s, %s, %s, %s" % (self.loc_id, self.iso,
+                                                  self.city, self.state,
+                                                  self.resource_file_path)
 
-    def __init__(self, resource_file_path=None):
-        self.resource_file_path = resource_file_path
-        if not resource_file_path:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            if key == 'iso':
+                self.iso = value
+            if key == 'resource_file_path':
+                self.resource_file_path = value
+        if not self.resource_file_path:
             raise BadLocation
         with open(self.resource_file_path, 'r') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -146,29 +153,33 @@ class Location():
             self.peak_rate = 1.5*self.base_rate
             self.off_peak_rate = 0.5*self.base_rate
 
-def load_location(lon, lat):
-    lon_lats = [(lon, lat)]
-    location = None
-    loc = nsrdbfetcher.fetch(lon_lats)
-    for loc in loc.resource_file_paths:
-        try:
-            location = Location(loc)
-        except BadLocation:
-            pass
-    return location
+    def get_rtp_seq(self):
+        rates = []
+        fname = "data/rates/%s, %s/%s/prices.csv" % (self.city,
+                                                     self.state,
+                                                     self.iso.upper())
+        with open(fname, 'r') as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                for k in row.keys():
+                    if k.startswith("HE "):
+                        # mW to kW
+                        r = (float(row[k])/1000)
+                        rates.append(r)
+        return rates
 
 def load_locations():
     lon_lats = []
     locations = []
     #'https://www2.census.gov/geo/docs/reference/cenpop2010/CenPop2010_Mean_ST.txt'
-    with open('data/CenPop2010_Mean_ST.txt', 'r') as csvfile:
+    with open('data/locations.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             lon_lats = [(row['LONGITUDE'], row['LATITUDE'])]
             locs = nsrdbfetcher.fetch(lon_lats)
             for loc in locs.resource_file_paths:
                 try:
-                    locations.append(Location(loc))
+                    locations.append(Location(resource_file_path=loc, iso=row['ISO']))
                 except BadLocation:
                     pass
     return locations
@@ -182,13 +193,4 @@ def gen_buy_rate_seq(tou_table, ur_ec_tou_mat):
     rates = []
     for tou in tou_table:
         rates.append(rates_table[tou])
-    return rates
-
-def get_rtp_seq():
-    rates = []
-    with open('data/columbia_lmp.csv', 'r') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            # rates are in MWh convert to kWh
-            rates.append(float(row['price'])/1000)
     return rates

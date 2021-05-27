@@ -9,7 +9,7 @@ import PySAM.Cashloan as cl
 import PySAM.Battwatts as battwatts
 
 from analysis.utils import modify_load, modify_battery_load
-from analysis.utils import gen_buy_rate_seq, get_rtp_seq
+from analysis.utils import gen_buy_rate_seq
 
 class BaseSystemAnalysis():
     model_name = "PVWattsResidential"
@@ -88,7 +88,7 @@ class BaseSystemAnalysis():
         load = self.load_model.LoadProfileEstimator.load
         tou_table = self.financial_model.Outputs.year1_hourly_ec_tou_schedule
         tou_mat = self.financial_model.ElectricityRates.ur_ec_tou_mat
-        rates = get_rtp_seq()
+        rates = self.location.get_rtp_seq()
         modified_load = modify_load(self.location.state, load, rates)
         demand = {'load':modified_load, 'rate':rates}
         if inc_date:
@@ -124,7 +124,6 @@ class BaseSystemAnalysis():
         if demand is None:
             demand = self.demand()
 
-        demand['month'] = demand.date.dt.month
         demand['fixed cost'] = demand['fixed'] * demand['fixed rate']
         demand['tou cost'] = demand['tou'] * demand['tou rate']
         demand['rtp cost'] = demand['rtp'] * demand['rtp rate']
@@ -147,9 +146,13 @@ class SolarSystemAnalysis(BaseSystemAnalysis):
 
     def demand(self):
         demand = BaseSystemAnalysis.demand(self)
-        demand['fixed'] = [(ld-gen) for ld, gen in zip(demand['fixed'], self.generated)]
-        demand['tou'] = [(ld-gen) for ld, gen in zip(demand['tou'], self.generated)]
-        demand['rtp'] = [(ld-gen) for ld, gen in zip(demand['rtp'], self.generated)]
+        demand['generated'] = self.generated
+        demand['fixed'] = demand.fixed - demand.generated
+        demand['fixed cost'] = demand['fixed'] * demand['fixed rate']
+        demand['tou'] = demand.tou - demand.generated
+        demand['tou cost'] = demand['tou'] * demand['tou rate']
+        demand['rtp'] = demand.rtp - demand.generated
+        demand['rtp cost'] = demand['rtp'] * demand['rtp rate']
         return demand
 
     def run_static_analysis(self):
@@ -168,13 +171,23 @@ class SolarSystemAnalysis(BaseSystemAnalysis):
 def installed_cost(pv_kw, battery_kw, battery_kwh):
     return pv_kw * 0 + battery_kw * 0 + battery_kwh * 0
 
-class SolarBatterySystemAnalysis(BaseSystemAnalysis):
+class SolarBatterySystemAnalysis(SolarSystemAnalysis):
     model_name = "PVWattsBatteryResidential"
     system_capacity = 10
+    battery_kwh = 15
 
     def __init__(self, location):
-        BaseSystemAnalysis.__init__(self, location)
-        self.battery_kwh = 15
+        SolarSystemAnalysis.__init__(self, location)
+
+        self.battery_model = battwatts.from_existing(self.residential_model,
+                                                     self.model_name)
+        self.battery_model.Battery.batt_simple_kwh = self.battery_kwh
+
+        self.battery_model.execute(0)
+
+    #def demand(self):
+    #    demand = SolarSystemAnalysis.demand(self)
+    #    return demand
 
     def run_static_analysis(self):
         residential_model = pv.default(self.model_name)
@@ -298,7 +311,7 @@ class SolarBatterySystemAnalysis(BaseSystemAnalysis):
         batt_soc = battery_model.Outputs.batt_SOC
 
         tou_table = financial_model.Outputs.year1_hourly_ec_tou_schedule
-        rates = get_rtp_seq()
+        rates = self.location.get_rtp_seq()
         modified_load = modify_battery_load(self.location.state, estimated_load, grid_to_load, rates)
         load_model.LoadProfileEstimator.load = tuple(modified_load)
         battery_model.execute(0)
