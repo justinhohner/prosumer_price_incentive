@@ -422,7 +422,7 @@ class FetchResourceFiles():
         """Download CSV file of solar resource data from NREL NSRDB API given a
         latitude and longitude. Use NSRDB Data Query API to list URLs to files
         available for given location."""
-        blacklist = open('blacklisted.txt', 'r')
+        blacklist = open('data/blacklisted.txt', 'r')
         blacklisted = blacklist.readlines()
         # --- unpack job ---
         lon, lat = job
@@ -457,11 +457,11 @@ class FetchResourceFiles():
                 lookup_json = lookup_response.json()
                 with open('{}/nsrdb_data_query_response_{}_{}.json'.format(self.SAM_resource_dir, lat, lon), 'w') as outfile:
                     blacklist.close()
-                    blacklist = open('blacklisted.txt', 'a')
+                    blacklist = open('data/blacklisted.txt', 'a')
                     blacklist.write(k)
                     blacklist.write("\n")
                     blacklist.close()
-                    blacklist = open('blacklisted.txt', 'r')
+                    blacklist = open('data/blacklisted.txt', 'r')
                     json.dump(lookup_json, outfile)
                     if enable_logging:
                         print('List of available data saved to {}.'.format(outfile.name))

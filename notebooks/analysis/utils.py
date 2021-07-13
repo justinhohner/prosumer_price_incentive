@@ -1,6 +1,8 @@
 
 import os
 import csv
+import requests
+from contextlib import closing
 import json
 from datetime import date, datetime, timedelta
 
@@ -9,7 +11,7 @@ from geopy.geocoders import Nominatim
 import urllib3
 urllib3.disable_warnings()
 
-import ResourceTools as tools
+import analysis.ResourceTools as tools
 
 #https://github.com/NREL/pysam/blob/master/Examples/FetchResourceFileExample.py
 nrel_api_key = os.getenv("NREL_API_KEY")
@@ -22,19 +24,29 @@ nsrdbfetcher = tools.FetchResourceFiles(
 
 elasticity_table = {}
 regional_elasticities = {}
-with open('short-run price elasticities for the residential electricity market.csv') as csvfile:
+electricity_rates = {}
+# TODO move files and create functions
+with open('data/short-run price elasticities for the residential electricity market.csv') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         regional_elasticities[row['Division']] = float(row['elasticity'])
 
-with open('us census bureau regions and divisions.csv') as csvfile:
+with open('data/us census bureau regions and divisions.csv') as csvfile:
     #State,State Code,Region,Division
     reader = csv.DictReader(csvfile)
     for row in reader:
         elasticity_table[row['State']] = regional_elasticities[row['Division']]
 
+with open('data/us electricity rates.csv') as csvfile:
+    # https://www.eia.gov/electricity/state/
+    #'Name', 'Average retail price (cents/kWh)', 'Net summer capacity (MW)', 'Net generation (MWh)', 'Total retail sales (MWh)'
+    reader = csv.DictReader(csvfile)
+    for row in reader:
+        # convert cents per kWh to dollars per kWh
+        electricity_rates[row['Name']] = float(row['Average retail price (cents/kWh)'])/100
+
 try:
-    with open('locations.json', 'r') as jsonfile:
+    with open('data/locations.json', 'r') as jsonfile:
         LOCATIONS = json.load(jsonfile)
 except FileNotFoundError:
     LOCATIONS = {}
@@ -60,35 +72,14 @@ def modify_load(state, estimated_load, rates):
     demand_modifier = 1
     modified_load = []
     for hr, rate in zip(estimated_load, rates):
-        delta_rate = ((rate - prev_rate)/prev_rate)
-        if delta_rate:
-            demand_modifier = 1+delta_rate*elasticity
+        pct_change = ((rate - prev_rate)/prev_rate)
+        if pct_change:
+            demand_modifier = 1+pct_change*elasticity
         prev_rate = rate
 
         demand = demand_modifier*hr
         if demand < 0:
             demand = 0
-        modified_load.append(demand)
-    return modified_load
-
-def modify_solar_load(state, estimated_load, generated, rates):
-    prev_rate = rates[0]
-    elasticity = elasticity_table[state]
-    demand_modifier = 1
-    modified_load = []
-    for hr_load, gen, rate in zip(estimated_load, generated, rates):
-        delta_rate = ((rate - prev_rate)/prev_rate)
-        if delta_rate:
-            demand_modifier = 1+delta_rate*elasticity
-        prev_rate = rate
-
-        demand = hr_load
-        excess_demand = hr_load - gen
-        # if demand is more than system generated reduce grid supplied energy by price
-        if excess_demand > 0:
-            excess_demand = demand_modifier*excess_demand
-            # add back generated energy for SAM's other calculations
-            demand = excess_demand + gen
         modified_load.append(demand)
     return modified_load
 
@@ -114,21 +105,34 @@ def modify_battery_load(state, estimated_load, grid_load, rates):
         modified_load.append(demand)
     return modified_load
 
+class BadLocationResponse(Exception):
+    pass
+
 class BadLocation(Exception):
     pass
 
 class Location():
     loc_id = None
+    iso = None
     city = None
     state = None
     resource_file_path = None
+    base_rate = 0.0
+    peak_rate = 0.0
+    off_peak_rate = 0.0
 
     def __repr__(self):
-        return "<Location: %s, %s, %s, %s" % (self.loc_id, self.city, self.state, self.resource_file_path)
+        return "<Location: %s, %s, %s, %s, %s" % (self.loc_id, self.iso,
+                                                  self.city, self.state,
+                                                  self.resource_file_path)
 
-    def __init__(self, resource_file_path=None):
-        self.resource_file_path = resource_file_path
-        if not resource_file_path:
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            if key == 'iso':
+                self.iso = value
+            if key == 'resource_file_path':
+                self.resource_file_path = value
+        if not self.resource_file_path:
             raise BadLocation
         with open(self.resource_file_path, 'r') as csvfile:
             reader = csv.DictReader(csvfile)
@@ -144,43 +148,41 @@ class Location():
                 self.state = location['address']['state']
             if 'city' in location['address']:
                 self.city = location['address']['city']
+        if self.state in electricity_rates:
+            self.base_rate = electricity_rates[self.state]
+            self.peak_rate = 1.5*self.base_rate
+            self.off_peak_rate = 0.5*self.base_rate
 
-def load_location(lon, lat):
-    lon_lats = [(lon, lat)]
-    location = None
-    loc = nsrdbfetcher.fetch(lon_lats)
-    for loc in loc.resource_file_paths:
-        try:
-            location = Location(loc)
-        except BadLocation:
-            pass
-    return location
+    def get_rtp_seq(self):
+        rates = []
+        fname = "data/rates/%s, %s/%s/prices.csv" % (self.city,
+                                                     self.state,
+                                                     self.iso.upper())
+        with open(fname, 'r') as fh:
+            reader = csv.DictReader(fh)
+            for row in reader:
+                for k in row.keys():
+                    if k.startswith("HE "):
+                        # mW to kW
+                        r = (float(row[k])/1000)
+                        rates.append(r)
+        return rates
 
 def load_locations():
     lon_lats = []
     locations = []
-    lim = 0
-    with open('stations.csv', 'r') as csvfile:
+    #'https://www2.census.gov/geo/docs/reference/cenpop2010/CenPop2010_Mean_ST.txt'
+    with open('data/locations.csv', 'r') as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
-            #if lim >= 250:
-            #    break
-            #lon_lats.append((row['longitude'], row['latitude']))
-            #lim += 1
-            lon_lats = [(row['longitude'], row['latitude'])]
+            lon_lats = [(row['LONGITUDE'], row['LATITUDE'])]
             locs = nsrdbfetcher.fetch(lon_lats)
             for loc in locs.resource_file_paths:
                 try:
-                    locations.append(Location(loc))
+                    locations.append(Location(resource_file_path=loc, iso=row['ISO']))
                 except BadLocation:
                     pass
     return locations
-
-def datespan(startDate, endDate, delta=timedelta(hours=1)):
-    currentDate = startDate
-    while currentDate < endDate:
-        yield currentDate
-        currentDate += delta
 
 def gen_buy_rate_seq(tou_table, ur_ec_tou_mat):
     # 6 columns period, tier, max usage, max usage units, buy, sell
@@ -191,13 +193,4 @@ def gen_buy_rate_seq(tou_table, ur_ec_tou_mat):
     rates = []
     for tou in tou_table:
         rates.append(rates_table[tou])
-    return rates
-
-def get_rtp_seq():
-    rates = []
-    with open('columbia_lmp.csv', 'r') as csvfile:
-        reader = csv.DictReader(csvfile)
-        for row in reader:
-            # rates are in MWh convert to kWh
-            rates.append(float(row['price'])/1000)
     return rates
