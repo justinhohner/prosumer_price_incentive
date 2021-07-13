@@ -174,7 +174,7 @@ def installed_cost(pv_kw, battery_kw, battery_kwh):
 class SolarBatterySystemAnalysis(SolarSystemAnalysis):
     model_name = "PVWattsBatteryResidential"
     system_capacity = 10
-    battery_kwh = 15
+    battery_kwh = 13.5
 
     def __init__(self, location):
         SolarSystemAnalysis.__init__(self, location)
@@ -182,12 +182,7 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         self.battery_model = battwatts.from_existing(self.residential_model,
                                                      self.model_name)
         self.battery_model.Battery.batt_simple_kwh = self.battery_kwh
-
         self.battery_model.execute(0)
-
-    #def demand(self):
-    #    demand = SolarSystemAnalysis.demand(self)
-    #    return demand
 
     def run_static_analysis(self):
         residential_model = pv.default(self.model_name)
@@ -234,6 +229,7 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         grid_model = grid.from_existing(residential_model, self.model_name)
         battery_model = battwatts.from_existing(residential_model, self.model_name)
         battery_model.Battery.batt_simple_kwh = self.battery_kwh
+        #battery_model.Battery.batt_dispatch_auto_can_gridcharge = 0.0
         load_model = ld.from_existing(residential_model, self.model_name)
         financial_model = ur.from_existing(residential_model, self.model_name)
         cash_model = cl.from_existing(residential_model, self.model_name)

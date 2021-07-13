@@ -21,12 +21,12 @@ def annual_graph(demand, k, y_min, y_max, title, show=False):
     plt.close()
 
 def hourly_graph(demand, k, title, show=False):
-    demand.boxplot(column=k, by='hour')
+    demand.boxplot(column=k, by='hour', whis=(0,100))
     plt.title(title)
     if show:
         plt.show()
     else:
-        plt.savefig('%s.png' % title)
+        plt.savefig('output/load/%s.png' % title)
     plt.close()
 
 def monthly_bill_lines(demand, title, show=False):
@@ -112,21 +112,21 @@ def analyze(location, show=False):
         title = "%s - Annual %s" % (location.state, k.title())
         #annual_graph(demand, k, y_min, y_max, title, show)
         title = "%s - Hourly %s" % (location_info, k.title())
-        #hourly_graph(demand, k, title, show)
+        hourly_graph(demand, k, title, show)
 
         title = "%s - %s Monthly Solar Bill" % (location.state, k.title())
         #monthly_bill_hist(solar_demand, bill, title, show)
         title = "%s - Annual Solar %s" % (location.state, k.title())
         #annual_graph(solar_demand, k, y_min, y_max, title, show)
         title = "%s - Hourly Solar %s" % (location_info, k.title())
-        #hourly_graph(solar_demand, k, title, show)
+        hourly_graph(solar_demand, k, title, show)
 
         title = "%s - %s Monthly Solar+Battery Bill" % (location.state, k.title())
         #monthly_bill_hist(battery_demand, bill, title, show)
         title = "%s - Annual Solar+Battery %s" % (location.state, k.title())
         #annual_graph(battery_demand, k, y_min, y_max, title, show)
         title = "%s - Hourly Solar+Battery %s" % (location_info, k.title())
-        #hourly_graph(battery_demand, k, title, show)
+        hourly_graph(battery_demand, k, title, show)
 
 if __name__ == "__main__":
     locations = load_locations()
