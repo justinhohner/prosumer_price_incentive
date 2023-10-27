@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 import csv, json
-import PySAM.Pvwattsv7 as pv
+import PySAM.Pvwattsv8 as pv
 import PySAM.Belpe as ld
 import PySAM.Grid as grid
 import PySAM.Utilityrate5 as ur
@@ -27,6 +27,7 @@ class BaseSystemAnalysis():
         self.load_model.LoadProfileEstimator.en_heat = 0.0
         #self.load_model.LoadProfileEstimator.en_cool = 0.0
         self.financial_model.ur_monthly_fixed_charge = 0
+        #self.residential_model.AdjustmentFactors.constant = 0
         self.residential_model.SystemDesign.system_capacity = 0
         self.residential_model.SolarResource.solar_resource_file = self.weather_file
 

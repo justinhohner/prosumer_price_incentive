@@ -5,6 +5,7 @@ import requests
 from contextlib import closing
 import json
 from datetime import date, datetime, timedelta
+from time import sleep
 
 from geopy.geocoders import Nominatim
 
@@ -177,6 +178,7 @@ def load_locations():
         for row in reader:
             lon_lats = [(row['LONGITUDE'], row['LATITUDE'])]
             locs = nsrdbfetcher.fetch(lon_lats)
+            sleep(2)
             for loc in locs.resource_file_paths:
                 try:
                     locations.append(Location(resource_file_path=loc, iso=row['ISO']))

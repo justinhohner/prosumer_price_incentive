@@ -66,12 +66,17 @@ def analyze(location, show=False):
 
     location_info = "%s, %s (%s)" % (location.city, location.state,
                                      location.iso)
-    #title = "%s - Grid Monthly Bills" % location_info
-    #monthly_bill_lines(demand, title)
-    #title = "%s - Solar Monthly Bills" % location_info
-    #monthly_bill_lines(solar_demand, title)
-    #title = "%s - Solar+Battery Monthly Bills" % location_info
-    #monthly_bill_lines(battery_demand, title)
+    title = "%s - Grid Monthly Bills" % location_info
+    monthly_bill_lines(demand, title)
+    title = "%s - Solar Monthly Bills" % location_info
+    monthly_bill_lines(solar_demand, title)
+    title = "%s - Solar+Battery Monthly Bills" % location_info
+    monthly_bill_lines(battery_demand, title)
+
+    with open(f"{location_info}-demand.csv", "w") as fh:
+        for d in demand:
+            fh.write(d)
+            fh.write("\n")
 
     ############# one big chart ###############
     title = "%s - Monthly Bills" % location_info
@@ -108,23 +113,23 @@ def analyze(location, show=False):
 
         bill = "%s cost" % k
         title = "%s - %s Monthly Bill" % (location.state, k.title())
-        #monthly_bill_hist(demand, bill, title, show)
+        monthly_bill_hist(demand, bill, title, show)
         title = "%s - Annual %s" % (location.state, k.title())
-        #annual_graph(demand, k, y_min, y_max, title, show)
+        annual_graph(demand, k, y_min, y_max, title, show)
         title = "%s - Hourly %s" % (location_info, k.title())
         hourly_graph(demand, k, title, show)
 
         title = "%s - %s Monthly Solar Bill" % (location.state, k.title())
-        #monthly_bill_hist(solar_demand, bill, title, show)
+        monthly_bill_hist(solar_demand, bill, title, show)
         title = "%s - Annual Solar %s" % (location.state, k.title())
-        #annual_graph(solar_demand, k, y_min, y_max, title, show)
+        annual_graph(solar_demand, k, y_min, y_max, title, show)
         title = "%s - Hourly Solar %s" % (location_info, k.title())
         hourly_graph(solar_demand, k, title, show)
 
         title = "%s - %s Monthly Solar+Battery Bill" % (location.state, k.title())
-        #monthly_bill_hist(battery_demand, bill, title, show)
+        monthly_bill_hist(battery_demand, bill, title, show)
         title = "%s - Annual Solar+Battery %s" % (location.state, k.title())
-        #annual_graph(battery_demand, k, y_min, y_max, title, show)
+        annual_graph(battery_demand, k, y_min, y_max, title, show)
         title = "%s - Hourly Solar+Battery %s" % (location_info, k.title())
         hourly_graph(battery_demand, k, title, show)
 
