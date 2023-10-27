@@ -1,0 +1,29 @@
+FROM sam-base
+
+ENV GTEST /home/sam/sam_dev/googletest
+ENV LKDIR /home/sam/sam_dev/lk
+ENV WEXDIR /home/sam/sam_dev/wex
+ENV SSCDIR /home/sam/sam_dev/ssc
+ENV SAMNTDIR /home/sam/sam_dev/SAM
+ENV RAPIDJSONDIR /home/sam/sam_dev/ssc
+ENV PYSAMDIR /home/sam/sam_dev/pysam
+
+RUN cd ${LKDIR}; git checkout .; git pull; git checkout tags/2022.11.21.r3.ssc.280 -b build
+RUN cd ${WEXDIR}; git checkout .; git pull; git checkout tags/2022.11.21.r3.ssc.280 -b build
+RUN cd ${SSCDIR}; git checkout .; git pull; git checkout tags/2022.11.21.r3.ssc.280 -b build
+RUN cd ${SAMNTDIR}; git checkout .; git pull; git checkout tags/2022.11.21.r3.ssc.280 -b build
+RUN cd ${PYSAMDIR}; git checkout .; git pull; git checkout tags/v4.2.0  -b build
+
+COPY patches/ssc-2022.11.21.r3.ssc.280.patch /home/sam/sam_dev/ssc-2022.11.21.r3.ssc.280.patch
+RUN cd ${SSCDIR} && git apply /home/sam/sam_dev/ssc-2022.11.21.r3.ssc.280.patch
+
+RUN cd /home/sam/sam_dev && \
+    rm -rf build && \
+    mkdir build && \
+    cd build && \
+    cmake .. -DCMAKE_BUILD_TYPE=Release && \
+    make -j4
+
+RUN pip3.8 install -U pip setuptools
+RUN cd ${PYSAMDIR} && pip3.8 install jupyterlab matplot numpy scipy pandas notebook geopy imgkit
+RUN cd ${PYSAMDIR} && python3.8 setup.py bdist_wheel && pip3.8 install dist/NREL_PySAM-4.2.0-cp38-cp38-linux_x86_64.whl
