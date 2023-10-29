@@ -32,8 +32,8 @@ RUN ln -s /usr/include/jsoncpp/json/ /usr/include/json
 
 RUN mkdir -p /home/sam/sam_dev
 WORKDIR /home/sam/sam_dev
-COPY diffs/CMakeLists.txt /home/sam/sam_dev/CMakeLists.txt
-COPY diffs/ssc-scaling.patch /home/sam/sam_dev/ssc-scaling.patch
+COPY patches/CMakeLists.txt /home/sam/sam_dev/CMakeLists.txt
+COPY patches/ssc-2022.11.21.r3.ssc.280.patch /home/sam/sam_dev/ssc-scaling.patch
 
 
 #RUN wget https://cmake.org/files/v3.24/cmake-3.24.4-linux-x86_64.tar.gz -O /home/sam/cmake-3.24.4-linux-x86_64.tar.gz
