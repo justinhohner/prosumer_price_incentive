@@ -1,7 +1,7 @@
 import pandas as pd
 from datetime import datetime
 import csv, json
-import PySAM.Pvwattsv7 as pv
+import PySAM.Pvwattsv8 as pv
 import PySAM.Belpe as ld
 import PySAM.Grid as grid
 import PySAM.Utilityrate5 as ur
@@ -113,9 +113,9 @@ class BaseSystemAnalysis():
         demand['rtp rate'] = rtp_demand.pop('rate')
 
         df = pd.DataFrame.from_dict(demand)
-        df['fixed cost'] = df['fixed'] * demand['fixed rate']
-        df['tou cost'] = df['tou'] * demand['tou rate']
-        df['rtp cost'] = df['rtp'] * demand['rtp rate']
+        #df['fixed cost'] = df['fixed'] * demand['fixed rate']
+        #df['tou cost'] = df['tou'] * demand['tou rate']
+        #df['rtp cost'] = df['rtp'] * demand['rtp rate']
         df['hour'] = df.date.dt.hour
         df['month'] = df.date.dt.month
         return df
@@ -184,6 +184,21 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         self.battery_model.Battery.batt_simple_kwh = self.battery_kwh
         self.battery_model.execute(0)
 
+    def demand(self):
+        demand = SolarSystemAnalysis.demand(self)
+        demand['generated'] = self.generated
+        demand['fixed'] = demand.fixed - demand.generated
+        demand['fixed cost'] = demand['fixed'] * demand['fixed rate']
+        demand['tou'] = demand.tou - demand.generated
+        demand['tou cost'] = demand['tou'] * demand['tou rate']
+        demand['rtp'] = demand.rtp - demand.generated
+        demand['rtp cost'] = demand['rtp'] * demand['rtp rate']
+        demand['grid_power'] = self.battery_model.Outputs.grid_power # Electricity to/from grid [kW]
+        demand['grid_to_batt'] = self.battery_model.Outputs.grid_to_batt #Electricity to battery from grid [kW]
+        demand['grid_to_load'] = self.battery_model.Outputs.grid_to_load #Electricity to load from grid [kW]
+        demand['batt_to_load'] = self.battery_model.Outputs.batt_to_load #Electricity to load from battery [kW]
+        return demand
+
     def run_static_analysis(self):
         residential_model = pv.default(self.model_name)
         # 10 kW solar system
@@ -209,6 +224,12 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
                                 self.battery_kwh)
         cash_model.execute(0)
 
+        grid_power = battery_model.Outputs.grid_power # Electricity to/from grid [kW]
+        grid_to_batt = battery_model.Outputs.grid_to_batt #Electricity to battery from grid [kW]
+        grid_to_load = battery_model.Outputs.grid_to_load #Electricity to load from grid [kW]
+        batt_to_load = battery_model.Outputs.batt_to_load #Electricity to load from battery [kW]
+        batt_soc = battery_model.Outputs.batt_SOC
+
         annual_energy = round(financial_model.Outputs.annual_electric_load[1], 2)
         capital_cost = round(cash_model.Outputs.adjusted_installed_cost, 2)
         nominal_lcoe = round(cash_model.Outputs.lcoe_nom, 2)
@@ -218,7 +239,7 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         full_demand_cost = round(financial_model.Outputs.elec_cost_with_system_year1, 2)
         return ['Solar+Battery static price', annual_energy, capital_cost,
                 nominal_lcoe, real_lcoe, npv,
-                full_demand_cost]
+                full_demand_cost, grid_power, grid_to_batt, grid_to_load, batt_to_load]
 
     def run_tou_analysis(self):
         residential_model = pv.default(self.model_name)
@@ -271,7 +292,7 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         full_demand_cost = round(financial_model.Outputs.elec_cost_with_system_year1, 2)
         return ['Solar+Battery TOU price', annual_energy, capital_cost,
                 nominal_lcoe, real_lcoe, npv,
-                full_demand_cost]
+                full_demand_cost, grid_power, grid_to_batt, grid_to_load, batt_to_load]
 
     def run_rtp_analysis(self):
         residential_model = pv.default(self.model_name)
@@ -323,4 +344,4 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         full_demand_cost = round(financial_model.Outputs.elec_cost_with_system_year1, 2)
         return ['Solar+Battery RTP price', annual_energy, capital_cost,
                 nominal_lcoe, real_lcoe, npv,
-                full_demand_cost]
+                full_demand_cost, grid_power, grid_to_batt, grid_to_load, batt_to_load]
