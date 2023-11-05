@@ -1,15 +1,14 @@
 import pandas as pd
 from datetime import datetime
-import csv, json
 import PySAM.Pvwattsv8 as pv
 import PySAM.Belpe as ld
-import PySAM.Grid as grid
 import PySAM.Utilityrate5 as ur
 import PySAM.Cashloan as cl
 import PySAM.Battwatts as battwatts
 
 from analysis.utils import modify_load, modify_battery_load
 from analysis.utils import gen_buy_rate_seq
+
 
 class BaseSystemAnalysis():
     model_name = "PVWattsResidential"
@@ -20,15 +19,17 @@ class BaseSystemAnalysis():
         self.weather_file = self.location.resource_file_path
         # base SAM model
         self.residential_model = pv.default(self.model_name)
-        self.load_model = ld.from_existing(self.residential_model, self.model_name)
-        self.financial_model = ur.from_existing(self.residential_model, self.model_name)
+        self.load_model = ld.from_existing(
+            self.residential_model, self.model_name)
+        self.financial_model = ur.from_existing(
+            self.residential_model, self.model_name)
 
         self.load_model.LoadProfileEstimator.en_belpe = 1.0
         self.load_model.LoadProfileEstimator.en_heat = 0.0
-        #self.load_model.LoadProfileEstimator.en_cool = 0.0
+        # self.load_model.LoadProfileEstimator.en_cool = 0.0
         self.financial_model.ur_monthly_fixed_charge = 0
         self.residential_model.SystemDesign.system_capacity = 0
-        self.residential_model.SolarResource.solar_resource_file = self.weather_file
+        self.residential_model.SolarResource.solar_resource_file = self.weather_file  # noqa: E501
 
         self.residential_model.execute(0)
         self.load_model.execute(0)
@@ -38,9 +39,9 @@ class BaseSystemAnalysis():
         # set fixed monthly fees to $0.0
         self.financial_model.ElectricityRates.ur_monthly_fixed_charge = 0.0
         self.financial_model.ElectricityRates.ur_ec_tou_mat = (
-            (1.0, 1.0, 1e+38, 0.0, self.location.base_rate, self.location.base_rate),
-            (2.0, 1.0, 1e+38, 0.0, self.location.off_peak_rate, self.location.off_peak_rate),
-            (3.0, 1.0, 1e+38, 0.0, self.location.off_peak_rate, self.location.off_peak_rate)
+            (1.0, 1.0, 1e+38, 0.0, self.location.base_rate, self.location.base_rate),  # noqa: E501
+            (2.0, 1.0, 1e+38, 0.0, self.location.off_peak_rate, self.location.off_peak_rate),  # noqa: E501
+            (3.0, 1.0, 1e+38, 0.0, self.location.off_peak_rate, self.location.off_peak_rate)  # noqa: E501
         )
 
     def fixed_rate_demand(self, inc_date=False):
@@ -54,7 +55,7 @@ class BaseSystemAnalysis():
         tou_table = self.financial_model.Outputs.year1_hourly_ec_tou_schedule
         tou_mat = self.financial_model.ElectricityRates.ur_ec_tou_mat
         rates = gen_buy_rate_seq(tou_table, tou_mat)
-        demand = {'load':load, 'rate':rates}
+        demand = {'load': load, 'rate': rates}
         if inc_date:
             startDate = datetime(2019, 1, 1)
             demand['date'] = pd.date_range(startDate, freq='1h', periods=8760)
@@ -72,7 +73,7 @@ class BaseSystemAnalysis():
         tou_mat = self.financial_model.ElectricityRates.ur_ec_tou_mat
         rates = gen_buy_rate_seq(tou_table, tou_mat)
         modified_load = modify_load(self.location.state, load, rates)
-        demand = {'load':modified_load, 'rate':rates}
+        demand = {'load': modified_load, 'rate': rates}
         if inc_date:
             startDate = datetime(2019, 1, 1)
             demand['date'] = pd.date_range(startDate, freq='1h', periods=8760)
@@ -86,16 +87,15 @@ class BaseSystemAnalysis():
         self.financial_model.execute(0)
 
         load = self.load_model.LoadProfileEstimator.load
-        tou_table = self.financial_model.Outputs.year1_hourly_ec_tou_schedule
-        tou_mat = self.financial_model.ElectricityRates.ur_ec_tou_mat
+        # tou_table = self.financial_model.Outputs.year1_hourly_ec_tou_schedule
+        # tou_mat = self.financial_model.ElectricityRates.ur_ec_tou_mat
         rates = self.location.get_rtp_seq()
         modified_load = modify_load(self.location.state, load, rates)
-        demand = {'load':modified_load, 'rate':rates}
+        demand = {'load': modified_load, 'rate': rates}
         if inc_date:
             startDate = datetime(2019, 1, 1)
             demand['date'] = pd.date_range(startDate, freq='1h', periods=8760)
         return demand
-
 
     def demand(self):
         demand = self.fixed_rate_demand()
@@ -113,9 +113,9 @@ class BaseSystemAnalysis():
         demand['rtp rate'] = rtp_demand.pop('rate')
 
         df = pd.DataFrame.from_dict(demand)
-        #df['fixed cost'] = df['fixed'] * demand['fixed rate']
-        #df['tou cost'] = df['tou'] * demand['tou rate']
-        #df['rtp cost'] = df['rtp'] * demand['rtp rate']
+        # df['fixed cost'] = df['fixed'] * demand['fixed rate']
+        # df['tou cost'] = df['tou'] * demand['tou rate']
+        # df['rtp cost'] = df['rtp'] * demand['rtp rate']
         df['hour'] = df.date.dt.hour
         df['month'] = df.date.dt.month
         return df
@@ -129,6 +129,7 @@ class BaseSystemAnalysis():
         demand['rtp cost'] = demand['rtp'] * demand['rtp rate']
         return demand
 
+
 class SolarSystemAnalysis(BaseSystemAnalysis):
     model_name = "PVWattsResidential"
     system_capacity = 10
@@ -136,10 +137,10 @@ class SolarSystemAnalysis(BaseSystemAnalysis):
     def __init__(self, location):
         BaseSystemAnalysis.__init__(self, location)
         # 10 kW solar system
-        self.residential_model.SystemDesign.system_capacity = self.system_capacity
-        self.residential_model.SolarResource.solar_resource_file = self.weather_file
+        self.residential_model.SystemDesign.system_capacity = self.system_capacity  # noqa: E501
+        self.residential_model.SolarResource.solar_resource_file = self.weather_file  # noqa: E501
 
-        #cash_model = cl.from_existing(residential_model, self.model_name)
+        # cash_model = cl.from_existing(residential_model, self.model_name)
         self.residential_model.execute(0)
         self.load_model.execute(0)
         self.generated = self.residential_model.Outputs.gen
@@ -156,9 +157,12 @@ class SolarSystemAnalysis(BaseSystemAnalysis):
         return demand
 
     def run_static_analysis(self):
-        self.financial_model.ElectricityRates.ur_ec_sched_weekday = tuple([tuple([1.0]*24)]*12)
+        self.financial_model.ElectricityRates.ur_ec_sched_weekday = tuple(
+            [tuple([1.0]*24)]*12)
         self.financial_model.execute(0)
-        demand = [(ld-gen) for ld, gen in zip(self.hourly_load_estimate, self.generated)]
+        demand = [
+            (ld-gen) for ld, gen in zip(
+                self.hourly_load_estimate, self.generated)]
         self.annual_load = round(sum(demand), 2)
         self.capital_cost = None
         self.nominal_lcoe = None
@@ -167,9 +171,11 @@ class SolarSystemAnalysis(BaseSystemAnalysis):
         self.demand_cost = round(sum(demand) * self.location.base_rate, 2)
         return self._get_analysis_output('Solar static price')
 
-# taken from https://github.com/NREL/pysam/blob/master/Examples/PySAMWorkshop.ipynb, not sure how accurate
+
+# taken from https://github.com/NREL/pysam/blob/master/Examples/PySAMWorkshop.ipynb, not sure how accurate  # noqa: E501
 def installed_cost(pv_kw, battery_kw, battery_kwh):
     return pv_kw * 0 + battery_kw * 0 + battery_kwh * 0
+
 
 class SolarBatterySystemAnalysis(SolarSystemAnalysis):
     model_name = "PVWattsBatteryResidential"
@@ -193,16 +199,16 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         )
         self.financial_model.execute(0)
         self.cash_model.total_installed_cost = installed_cost(
-                            self.residential_model.SystemDesign.system_capacity,
-                            (self.battery_kwh/4), # 4 hour battery
-                            self.battery_kwh)
+                        self.residential_model.SystemDesign.system_capacity,
+                        (self.battery_kwh/4),  # 4 hour battery
+                        self.battery_kwh)
         self.cash_model.execute(0)
 
         load = self.load_model.LoadProfileEstimator.load
         tou_table = self.financial_model.Outputs.year1_hourly_ec_tou_schedule
         tou_mat = self.financial_model.ElectricityRates.ur_ec_tou_mat
         rates = gen_buy_rate_seq(tou_table, tou_mat)
-        demand = {'load':load, 'rate':rates}
+        demand = {'load': load, 'rate': rates}
         if inc_date:
             startDate = datetime(2019, 1, 1)
             demand['date'] = pd.date_range(startDate, freq='1h', periods=8760)
@@ -215,9 +221,9 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         )
         self.financial_model.execute(0)
         self.cash_model.total_installed_cost = installed_cost(
-                            self.residential_model.SystemDesign.system_capacity,
-                            (self.battery_kwh/4), # 4 hour battery
-                            self.battery_kwh)
+                        self.residential_model.SystemDesign.system_capacity,
+                        (self.battery_kwh/4),  # 4 hour battery
+                        self.battery_kwh)
         self.cash_model.execute(0)
 
         estimated_load = self.load_model.LoadProfileEstimator.load
@@ -228,7 +234,7 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         grid_to_load = self.battery_model.Outputs.grid_to_load
         modified_load = modify_battery_load(
             self.location.state, estimated_load, grid_to_load, rates)
-        demand = {'load':modified_load, 'rate':rates}
+        demand = {'load': modified_load, 'rate': rates}
         if inc_date:
             startDate = datetime(2019, 1, 1)
             demand['date'] = pd.date_range(startDate, freq='1h', periods=8760)
@@ -241,20 +247,20 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         )
         self.financial_model.execute(0)
         self.cash_model.total_installed_cost = installed_cost(
-                            self.residential_model.SystemDesign.system_capacity,
-                            (self.battery_kwh/4), # 4 hour battery
-                            self.battery_kwh)
+                        self.residential_model.SystemDesign.system_capacity,
+                        (self.battery_kwh/4),  # 4 hour battery
+                        self.battery_kwh)
         self.cash_model.execute(0)
 
         estimated_load = self.load_model.LoadProfileEstimator.load
-        tou_table = self.financial_model.Outputs.year1_hourly_ec_tou_schedule
-        tou_mat = self.financial_model.ElectricityRates.ur_ec_tou_mat
+        # tou_table = self.financial_model.Outputs.year1_hourly_ec_tou_schedule
+        # tou_mat = self.financial_model.ElectricityRates.ur_ec_tou_mat
         rates = self.location.get_rtp_seq()
         # Electricity to load from grid [kW]
         grid_to_load = self.battery_model.Outputs.grid_to_load
         modified_load = modify_battery_load(
             self.location.state, estimated_load, grid_to_load, rates)
-        demand = {'load':modified_load, 'rate':rates}
+        demand = {'load': modified_load, 'rate': rates}
         if inc_date:
             startDate = datetime(2019, 1, 1)
             demand['date'] = pd.date_range(startDate, freq='1h', periods=8760)
@@ -269,8 +275,12 @@ class SolarBatterySystemAnalysis(SolarSystemAnalysis):
         demand['tou cost'] = demand['tou'] * demand['tou rate']
         demand['rtp'] = demand.rtp - demand.generated
         demand['rtp cost'] = demand['rtp'] * demand['rtp rate']
-        demand['grid_power'] = self.battery_model.Outputs.grid_power # Electricity to/from grid [kW]
-        demand['grid_to_batt'] = self.battery_model.Outputs.grid_to_batt #Electricity to battery from grid [kW]
-        demand['grid_to_load'] = self.battery_model.Outputs.grid_to_load #Electricity to load from grid [kW]
-        demand['batt_to_load'] = self.battery_model.Outputs.batt_to_load #Electricity to load from battery [kW]
+        # Electricity to/from grid [kW]
+        demand['grid_power'] = self.battery_model.Outputs.grid_power
+        # Electricity to battery from grid [kW]
+        demand['grid_to_batt'] = self.battery_model.Outputs.grid_to_batt
+        # Electricity to load from grid [kW]
+        demand['grid_to_load'] = self.battery_model.Outputs.grid_to_load
+        # Electricity to load from battery [kW]
+        demand['batt_to_load'] = self.battery_model.Outputs.batt_to_load
         return demand

@@ -26,7 +26,7 @@ def SAM_CSV_to_solar_data(filename):
 
     :param filename: Any csv resource file formatted according to NSRDB
 
-    :return: Dictionary for PySAM.Pvwattsv7.Pvwattsv7.SolarResource, and other models
+    :return: Dictionary for PySAM.Pvwattsv7.Pvwattsv7.SolarResource, and other models  # noqa: E501
     """
     if not os.path.isfile(filename):
         raise FileNotFoundError(filename + " does not exist.")
@@ -37,7 +37,8 @@ def SAM_CSV_to_solar_data(filename):
             info.append(file_in.readline().rstrip())
             info[i] = info[i].split(",")
         if "Time Zone" not in info[0]:
-            raise ValueError("`Time Zone` field not found in solar resource file.")
+            raise ValueError(
+                "`Time Zone` field not found in solar resource file.")
         latitude = info[1][info[0].index("Latitude")]
         longitude = info[1][info[0].index("Longitude")]
         tz = info[1][info[0].index("Time Zone")]
@@ -55,42 +56,49 @@ def SAM_CSV_to_solar_data(filename):
         weather['lat'] = float(latitude)
         weather['lon'] = float(longitude)
 
-        # Create dict with keys = keys passed to SAM and values = list of possible key versions found in resource files (NREL / NASA POWER)
+        # Create dict with keys = keys passed to SAM and values = list of possible key versions found in resource files (NREL / NASA POWER)  # noqa: E501
         acceptable_keys = {
-            'year' : ['year', 'Year', 'yr'],
-            'month' : ['month', 'Month', 'mo'],
-            'day' : ['day', 'Day'],
-            'hour' : ['hour', 'Hour', 'hr'],
-            'minute' : ['minute', 'Minute', 'min'],
-            'dn' : ['dn', 'DNI','dni', 'beam', 'direct normal', 'direct normal irradiance'],
-            'df' : ['df', 'DHI', 'dhi', 'diffuse', 'diffuse horizontal', 'diffuse horizontal irradiance'],
-            'gh' : ['gh', 'GHI','ghi', 'global', 'global horizontal', 'global horizontal irradiance'],
-            'wspd' : ['wspd', 'Wind Speed', 'wind speed'],
-            'tdry' : ['tdry', 'Temperature', 'dry bulb', 'dry bulb temp', 'temperature', 'ambient', 'ambient temp'],
-            'wdir' : ['wdir', 'Wind Direction', 'wind direction'],
-            'pres' : ['pres', 'Pressure', 'pressure'],
-            'tdew' : ['tdew', 'Dew Point', 'Tdew', 'dew point', 'dew point temperature'],
-            'rhum' : ['rhum', 'Relative Humidity', 'rh', 'RH', 'relative humidity', 'humidity'],
-            'alb' : ['alb', 'Surface Albedo', 'albedo', 'surface albedo'],
-            'snow' : ['snow', 'Snow Depth', 'snow depth', 'snow cover']
+            'year': ['year', 'Year', 'yr'],
+            'month': ['month', 'Month', 'mo'],
+            'day': ['day', 'Day'],
+            'hour': ['hour', 'Hour', 'hr'],
+            'minute': ['minute', 'Minute', 'min'],
+            'dn': ['dn', 'DNI', 'dni', 'beam',
+                   'direct normal', 'direct normal irradiance'],
+            'df': ['df', 'DHI', 'dhi', 'diffuse',
+                   'diffuse horizontal', 'diffuse horizontal irradiance'],
+            'gh': ['gh', 'GHI', 'ghi', 'global',
+                   'global horizontal', 'global horizontal irradiance'],
+            'wspd': ['wspd', 'Wind Speed', 'wind speed'],
+            'tdry': ['tdry', 'Temperature', 'dry bulb',
+                     'dry bulb temp', 'temperature',
+                     'ambient', 'ambient temp'],
+            'wdir': ['wdir', 'Wind Direction', 'wind direction'],
+            'pres': ['pres', 'Pressure', 'pressure'],
+            'tdew': ['tdew', 'Dew Point', 'Tdew',
+                     'dew point', 'dew point temperature'],
+            'rhum': [
+                'rhum', 'Relative Humidity', 'rh',
+                'RH', 'relative humidity', 'humidity'],
+            'alb': ['alb', 'Surface Albedo', 'albedo', 'surface albedo'],
+            'snow': ['snow', 'Snow Depth', 'snow depth', 'snow cover']
         }
-        
-        # enumerates acceptable_keys, inserts key and values into weather dictionary if found in the resource file
+
+        # enumerates acceptable_keys, inserts key and values into weather dictionary if found in the resource file  # noqa: E501
         for key, list_of_keys in acceptable_keys.items():
             for good_key in list_of_keys:
                 if good_key in wfd.keys():
                     weather[key] = wfd.pop(good_key)
                     break
 
-        # handles averaged hourly data with no minute column provided by NASA POWER and removes 2/29 data for leap years
-        # this is a workaround so PySAM/SAM processes as instantaneous data (not setup to handle no minute column)
+        # handles averaged hourly data with no minute column provided by NASA POWER and removes 2/29 data for leap years  # noqa: E501
+        # this is a workaround so PySAM/SAM processes as instantaneous data (not setup to handle no minute column)  # noqa: E501
         if source == 'NASA/POWER':
             weather['minute'] = [30] * len(weather['hour'])
             if len(weather['hour']) == 8784:
                 for key in weather.keys():
-                    if key not in ['tz','elev','lat','lon']:
+                    if key not in ['tz', 'elev', 'lat', 'lon']:
                         del weather[key][1416:1440]
-
 
         return weather
 
@@ -108,16 +116,15 @@ def SRW_to_wind_data(filename):
     if not os.path.isfile(filename):
         raise FileNotFoundError(filename + " does not exist.")
     data_dict = dict()
- 
 
     with open(filename) as file_in:
         file_in.readline()
         source = str(file_in.readline().strip())
         fields = str(file_in.readline().strip()).split(',')
-        fields = [i for i in fields if i] #remove empty strings
+        fields = [i for i in fields if i]  # remove empty strings
         file_in.readline()
         heights = str(file_in.readline().strip()).split(',')
-        heights = [i for i in heights if i] #remove empty strings
+        heights = [i for i in heights if i]  # remove empty strings
         data_dict['heights'] = [float(i) for i in heights]
         data_dict['fields'] = []
 
@@ -128,23 +135,26 @@ def SRW_to_wind_data(filename):
             field_names = ('temperature', 'pressure', 'speed', 'direction')
         for field_name in fields:
             if field_name.lower() not in field_names:
-                raise ValueError(field_name.lower() + " required for wind data")
-            data_dict['fields'].append(field_names.index(field_name.lower()) + 1)
+                raise ValueError(
+                    field_name.lower() + " required for wind data")
+            data_dict['fields'].append(
+                field_names.index(field_name.lower()) + 1)
 
         data_dict['data'] = []
         reader = csv.reader(file_in)
         for row in reader:
-            row = [i for i in row if i] #remove empty strings
+            row = [i for i in row if i]  # remove empty strings
             data_dict['data'].append([float(i) for i in row])
-        
+
         return data_dict
+
 
 def URDBv7_to_ElectricityRates(urdb_response):
     """
     Formats response from Utility Rate Database API version 7 for use in PySAM
         i.e.
             model = PySAM.UtilityRate5.new()
-            rates = PySAM.ResourceTools.URDBv7_to_ElectricityRates(urdb_response)
+            rates = PySAM.ResourceTools.URDBv7_to_ElectricityRates(urdb_response)  # noqa: E501
             model.ElectricityRates.assign(rates)
 
     :param: urdb_response:
@@ -152,7 +162,7 @@ def URDBv7_to_ElectricityRates(urdb_response):
         https://openei.org/services/doc/rest/util_rates/?version=7
     :return: dictionary for PySAM.UtilityRate5.UtilityRate5.ElectricityRates
     """
-    warnings.warn("ResourceTools.URDBv7_to_ElectricityRates is deprecated. Please use UtilityRateTools.URDBv8_to_ElectricityRates instead.", DeprecationWarning)
+    warnings.warn("ResourceTools.URDBv7_to_ElectricityRates is deprecated. Please use UtilityRateTools.URDBv8_to_ElectricityRates instead.", DeprecationWarning)  # noqa: E501
 
     urdb_data = dict()
     urdb_data['en_electricity_rates'] = 1
@@ -167,10 +177,10 @@ def URDBv7_to_ElectricityRates(urdb_response):
     def try_get_rate_structure(urdb_name, data_name):
         mat = []
         supported_units = {
-            "kwh" : 0,
-            "kwh/kw" : 1,
-            "kwh daily" : 2,
-            "kwh/kw daily" : 3
+            "kwh": 0,
+            "kwh/kw": 1,
+            "kwh daily": 2,
+            "kwh/kw daily": 3
         }
         if urdb_name in urdb_response.keys():
             structure = urdb_response[urdb_name]
@@ -190,7 +200,7 @@ def URDBv7_to_ElectricityRates(urdb_response):
                         try:
                             units = supported_units[entry['unit'].lower()]
                         except KeyError:
-                            raise RuntimeError("UtilityRateDatabase error: unrecognized unit in rate structure")
+                            raise RuntimeError("UtilityRateDatabase error: unrecognized unit in rate structure")  # noqa: E501
                     mat.append((i + 1, j + 1, tier_max, units, rate, sell))
             urdb_data[data_name] = mat
 
@@ -208,7 +218,7 @@ def URDBv7_to_ElectricityRates(urdb_response):
                         tier_max = entry['max']
                     if 'unit' in entry.keys():
                         if entry['unit'].lower() != "kW".lower():
-                            raise RuntimeError("UtilityRateDatabase error: unrecognized unit in rate structure")
+                            raise RuntimeError("UtilityRateDatabase error: unrecognized unit in rate structure")  # noqa: E501
                     mat.append((i + 1, j + 1, tier_max, rate))
             if data_name:
                 urdb_data[data_name] = mat
@@ -229,7 +239,7 @@ def URDBv7_to_ElectricityRates(urdb_response):
         # if no metering option provided, assume Net Metering
         urdb_data['ur_metering_option'] = 0
 
-    if 'fixedchargefirstmeter' in urdb_response.keys() and 'fixedchargeunits' in urdb_response.keys():
+    if 'fixedchargefirstmeter' in urdb_response.keys() and 'fixedchargeunits' in urdb_response.keys():  # noqa: E501
         fixed_charge = urdb_response['fixedchargefirstmeter']
         fixed_charge_units = urdb_response['fixedchargeunits']
         if fixed_charge_units == "$/day":
@@ -256,7 +266,8 @@ def URDBv7_to_ElectricityRates(urdb_response):
     try_get_schedule('demandweekdayschedule', 'ur_dc_sched_weekday')
     try_get_schedule('demandweekendschedule', 'ur_dc_sched_weekend')
 
-    flat_demand_structure = try_get_demand_structure('flatdemandstructure', None)
+    flat_demand_structure = try_get_demand_structure(
+        'flatdemandstructure', None)
 
     if 'flatdemandmonths' in urdb_response.keys():
         urdb_data['ur_dc_enable'] = 1
@@ -267,16 +278,18 @@ def URDBv7_to_ElectricityRates(urdb_response):
             for r in flat_demand_structure:
                 if r[0] == int(period + 1):
                     tiers.append(r)
-                    
+
             if len(tiers) == 0:
-                raise ValueError("flatdemandstructure missing period number ", period)
+                raise ValueError(
+                    "flatdemandstructure missing period number ", period)
             for t in tiers:
                 month_row = []
                 month_row.append(month)
                 month_row += [t[i] for i in (1, 2, 3)]
                 flat_mat.append(month_row)
         urdb_data['ur_dc_flat_mat'] = flat_mat
-    # Fill out an empty flat rate structure if the rate has TOU demand but not flat demand    
+    # Fill out an empty flat rate structure
+    #  if the rate has TOU demand but not flat demand
     elif "demandratestructure" in urdb_response.keys():
         urdb_data['ur_dc_enable'] = 1
         # Enumerate a dc_flat table with $0/kW in 12 months
@@ -288,12 +301,13 @@ def URDBv7_to_ElectricityRates(urdb_response):
     else:
         urdb_data['ur_dc_enable'] = 0
 
-    if urdb_data['ur_dc_enable'] == 1 and "ur_dc_tou_mat" not in urdb_data.keys():
+    if urdb_data['ur_dc_enable'] == 1 and "ur_dc_tou_mat" not in urdb_data.keys():  # noqa: E501
         urdb_data['ur_dc_tou_mat'] = [[1, 1, 1e38, 0], ]
         urdb_data['ur_dc_sched_weekday'] = [[1] * 24 for i in range(12)]
         urdb_data['ur_dc_sched_weekend'] = urdb_data['ur_dc_sched_weekday']
 
     return urdb_data
+
 
 class FetchResourceFiles():
     """
@@ -301,10 +315,10 @@ class FetchResourceFiles():
     https://developer.nrel.gov/.
 
     :param str tech: *Required* Name of technology.
-        'wind' for NREL WIND Toolkit at https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/.
-        'solar' for NREL NSRDB at https://developer.nrel.gov/docs/solar/nsrdb/nsrdb_data_query/
+        'wind' for NREL WIND Toolkit at https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/.  # noqa: E501
+        'solar' for NREL NSRDB at https://developer.nrel.gov/docs/solar/nsrdb/nsrdb_data_query/  # noqa: E501
 
-    :param str nrel_api_key: *Required* NREL developer API key, available at https://developer.nrel.gov/signup/.
+    :param str nrel_api_key: *Required* NREL developer API key, available at https://developer.nrel.gov/signup/.  # noqa: E501
 
     :param str nrel_api_email: *Required* Email address associated with nrel_api_key.
 
@@ -321,7 +335,7 @@ class FetchResourceFiles():
         'psm3-5min' for 5-, 30- or 60-minute single-year file
         '' for WIND Toolkit
 
-    :param str resource_year: Data year, changes over time so check API documentation for latest information.
+    :param str resource_year: Data year, changes over time so check API documentation for latest information.  # noqa: E501
         Default = 'tmy' for solar, '2014' for wind.
         '1998' to '2019', etc. for NSRDB psm3
         'tmy' for latest TMY file from NSRDB psm3-tmy
@@ -329,12 +343,12 @@ class FetchResourceFiles():
         '2018', etc. for NSRDB psm3-5min
         '2007' to '2014' for WIND Toolkit
 
-    :param int resource_interval_min: Time interval of resource data in minutes. See available intervals under `resource_type` above.
+    :param int resource_interval_min: Time interval of resource data in minutes. See available intervals under `resource_type` above.  # noqa: E501
         Default = 60.
 
-    :param int resource_height: For wind only, wind resource measurement height above ground in meters.
+    :param int resource_height: For wind only, wind resource measurement height above ground in meters.  # noqa: E501
         Default = 100.
-        10, 40, 60, 80, 100, 120, 140, 160 for windspeed, winddirection, temperature
+        10, 40, 60, 80, 100, 120, 140, 160 for windspeed, winddirection, temperature  # noqa: E501
         0, 100, 200 for pressure
     """
 
@@ -372,7 +386,7 @@ class FetchResourceFiles():
         # --- Make folder to store resource_files ---
         self.SAM_resource_dir = resource_dir
         if not self.SAM_resource_dir:
-            self.SAM_resource_dir = os.path.join(os.getcwd(), 'data', 'PySAM Downloaded Weather Files')
+            self.SAM_resource_dir = os.path.join(os.getcwd(), 'data', 'PySAM Downloaded Weather Files')  # noqa: E501
         if not os.path.exists(self.SAM_resource_dir):
             os.makedirs(self.SAM_resource_dir)
 
@@ -381,13 +395,13 @@ class FetchResourceFiles():
         elif tech == 'wind':
             self.data_function = self._windtk_worker
         else:
-            raise NotImplementedError('Please write a wrapper to fetch data for the new technology type {}'.format(tech))
+            raise NotImplementedError('Please write a wrapper to fetch data for the new technology type {}'.format(tech))  # noqa: E501
 
     def _requests_retry_session(self, retries=10,
                                 backoff_factor=1,
                                 status_forcelist=(429, 500, 502, 504),
                                 session=None):
-        """https://www.peterbe.com/plog/best-practice-with-retries-with-requests"""
+        """https://www.peterbe.com/plog/best-practice-with-retries-with-requests"""  # noqa: E501
 
         session = session or requests.Session()
         session.verify = False
@@ -419,16 +433,20 @@ class FetchResourceFiles():
         site_year = header[2, 0]
 
         # --- create header lines ---
+        # meta info
         h1 = np.array([int(site_id), 'city??', 'state??', 'USA', site_year,
-                       site_lat, site_lon, 'elevation??', site_tz, 8760])  # meta info
+                       site_lat, site_lon, 'elevation??', site_tz, 8760])
+        # descriptive text
         h2 = np.array(["WTK .csv converted to .srw for SAM", None, None,
-                       None, None, None, None, None, None, None])  # descriptive text
+                       None, None, None, None, None, None, None])
+        # variables
         h3 = np.array(['temperature', 'pressure', 'direction',
-                       'speed', None, None, None, None, None, None])  # variables
+                       'speed', None, None, None, None, None, None])
+        # units
         h4 = np.array(['C', 'atm', 'degrees', 'm/s', None,
-                       None, None, None, None, None])  # units
-        h5 = np.array([self.resource_height, 100, self.resource_height, self.resource_height, None, None,
-                       None, None, None, None])  # hubheight
+                       None, None, None, None, None])
+        # hubheight
+        h5 = np.array([self.resource_height, 100, self.resource_height, self.resource_height, None, None, None, None, None, None])  # noqa: E501
         header = pd.DataFrame(np.vstack([h1, h2, h3, h4, h5]))
         assert header.shape == (5, 10)
 
@@ -442,14 +460,14 @@ class FetchResourceFiles():
         df = df.loc[~((df.index.month == 2) & (df.index.day == 29))]
 
         # --- convert K to celsius ---
-        df['temperature'] = df['air temperature at {}m (C)'.format(self.resource_height)]
+        df['temperature'] = df['air temperature at {}m (C)'.format(self.resource_height)]  # noqa: E501
 
         # --- convert PA to atm ---
         df['pressure'] = df['air pressure at 100m (Pa)'] / 101325
 
         # --- rename ---
-        rename_dict = {'wind speed at {}m (m/s)'.format(self.resource_height): 'speed',
-                       'wind direction at {}m (deg)'.format(self.resource_height): 'direction'}
+        rename_dict = {'wind speed at {}m (m/s)'.format(self.resource_height): 'speed',  # noqa: E501
+                       'wind direction at {}m (deg)'.format(self.resource_height): 'direction'}  # noqa: E501
         df.rename(rename_dict, inplace=True, axis='columns')
 
         # --- clean up ---
@@ -474,29 +492,29 @@ class FetchResourceFiles():
 
         # --- Intialize File Path ---
         file_path = os.path.join(
-            self.SAM_resource_dir, "nsrdb_{}_{}_{}_{}_{}.csv".format(lat, lon, self.resource_type, self.resource_interval_min, self.resource_year))
+            self.SAM_resource_dir, "nsrdb_{}_{}_{}_{}_{}.csv".format(lat, lon, self.resource_type, self.resource_interval_min, self.resource_year))  # noqa: E501
 
         # --- See if file path already exists ---
         if os.path.exists(file_path):
             if self.verbose:
-                print('File already exists. Skipping download: {}'.format(file_path))
+                print('File already exists. Skipping download: {}'.format(file_path))  # noqa: E501
             return file_path  # file already exists, just return path...
         else:
             if self.verbose:
-                print("Getting list of available NSRDB files for {}, {}.".format(lat, lon))
+                print("Getting list of available NSRDB files for {}, {}.".format(lat, lon))  # noqa: E501
 
             # --- Find url for closest point ---
             lookup_base_url = 'https://developer.nrel.gov/api/nsrdb/v2/solar/'
-            lookup_query_url = "nsrdb-data-query.json?api_key={}&wkt=POINT({}%20{})".format(self.nrel_api_key, lon, lat)
+            lookup_query_url = "nsrdb-data-query.json?api_key={}&wkt=POINT({}%20{})".format(self.nrel_api_key, lon, lat)  # noqa: E501
             lookup_url = lookup_base_url + lookup_query_url
-            lookup_response = retry_session.get(lookup_url, verify=certifi.where())
+            lookup_response = retry_session.get(lookup_url, verify=certifi.where())  # noqa: E501
 
             if lookup_response.ok:
                 lookup_json = lookup_response.json()
-                with open('{}/nsrdb_data_query_response_{}_{}.json'.format(self.SAM_resource_dir, lat, lon), 'w') as outfile:
+                with open('{}/nsrdb_data_query_response_{}_{}.json'.format(self.SAM_resource_dir, lat, lon), 'w') as outfile:  # noqa: E501
                     json.dump(lookup_json, outfile)
                     if self.verbose:
-                        print('List of available data saved to {}.'.format(outfile.name))
+                        print('List of available data saved to {}.'.format(outfile.name))  # noqa: E501
                 outputs = lookup_json['outputs']
                 if len(outputs) < 1:
                     print('No URLS available for {}, {}.'.format(lat, lon))
@@ -505,46 +523,46 @@ class FetchResourceFiles():
                 for output in outputs:
                     if output['name'] == self.resource_type:
                         for link in output['links']:
-                            if self.resource_year == str(link['year']) and self.resource_interval_min == link['interval']:
+                            if self.resource_year == str(link['year']) and self.resource_interval_min == link['interval']:  # noqa: E501
                                 ok = True
                                 data_url = link['link'].replace(
                                     'yourapikey', self.nrel_api_key).replace(
-                                    'youremail', self.nrel_api_email) + '&utc=false'
+                                    'youremail', self.nrel_api_email) + '&utc=false'  # noqa: E501
 
                 # --- Get data ---
                 if ok:
                     if self.verbose:
                         print(data_url)
-                    data_response = retry_session.get(data_url, verify=certifi.where())
+                    data_response = retry_session.get(data_url, verify=certifi.where())  # noqa: E501
                     if data_response.ok:
-                        # --- Convert response to string, read as pandas df, write to csv ---
+                        # --- Convert response to string, read as pandas df, write to csv ---  # noqa: E501
                         if self.verbose:
                             print('Downloading file.')
                         csv = io.StringIO(data_response.text)
                         df = pd.read_csv(csv)
                         df.to_csv(file_path, index=False)
                         if self.verbose:
-                            print('Success! File downloaded to {}.'.format(file_path))
+                            print('Success! File downloaded to {}.'.format(file_path))  # noqa: E501
                         return file_path
                     else:
                         try:
                             error_str = data_response.json()
-                        except:
+                        except:  # noqa: E722
                             error_str = data_response.content.decode("utf-8")
                         print(f"Request failed for {data_url}\n{error_str}")
                         return
                 else:
-                    print('Failed to find URL for resource_type = {}, resource_year = {}, resource_inverval_min = {}'.format(self.resource_type,self.resource_year,self.resource_interval_min))
+                    print('Failed to find URL for resource_type = {}, resource_year = {}, resource_inverval_min = {}'.format(self.resource_type, self.resource_year, self.resource_interval_min))  # noqa: E501
                     return
             else:
-                print('Error for {}, {}: {}'.format(lat, lon, lookup_response.content.decode("utf-8")))
+                print('Error for {}, {}: {}'.format(lat, lon, lookup_response.content.decode("utf-8")))  # noqa: E501
                 return
 
     def _windtk_worker(self, job):
         '''
         Download a CSV file of wind resource data from WIND Toolkit API given a latitude and longitude.
         This uses wtk-download (https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-download/), which is
-        a different approach than SAM, which uses wtk-srw-download (https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-srw-download/)
+        a different approach than SAM, which uses wtk-srw-download (https://developer.nrel.gov/docs/wind/wind-toolkit/wtk-srw-download/)  # noqa: E501
         '''
 
         # --- unpack job ---
@@ -555,22 +573,21 @@ class FetchResourceFiles():
 
         # --- Intialize File Path ---
         file_path = os.path.join(
-            self.SAM_resource_dir, "windtoolkit_{}_{}_{}min_{}m_{}.csv".format(lat, lon, self.resource_interval_min, self.resource_height, self.resource_year))
+            self.SAM_resource_dir, "windtoolkit_{}_{}_{}min_{}m_{}.csv".format(lat, lon, self.resource_interval_min, self.resource_height, self.resource_year))  # noqa: E501
 
         # --- See if file path already exists ---
         if os.path.exists(file_path):
             if self.verbose:
-                print('File already exists, skipping download: {}'.format(file_path))
+                print(f'File already exists, skipping download: {file_path}')
             return file_path
 
         else:
             if self.verbose:
-                print("Downloading file from WIND Toolkit for {}, {}.".format(lat, lon))
+                print(f"Downloading file from WIND Toolkit for {lat}, {lon}.")
 
             # --- Find url for closest point ---
-            data_base_url = 'https://developer.nrel.gov/api/wind-toolkit/v2/wind/'
-            data_query_url = "wtk-download.csv?api_key={}&wkt=POINT({}+{})&attributes=windspeed_{}m,winddirection_{}m,temperature_{}m,pressure_{}m&names={}&utc=false&interval={}&email={}".format(
-                self.nrel_api_key, lon, lat, self.resource_height, self.resource_height, self.resource_height, 100, self.resource_year, self.resource_interval_min, self.nrel_api_email)
+            data_base_url = 'https://developer.nrel.gov/api/wind-toolkit/v2/wind/'  # noqa: E501
+            data_query_url = "wtk-download.csv?api_key={}&wkt=POINT({}+{})&attributes=windspeed_{}m,winddirection_{}m,temperature_{}m,pressure_{}m&names={}&utc=false&interval={}&email={}".format(self.nrel_api_key, lon, lat, self.resource_height, self.resource_height, self.resource_height, 100, self.resource_year, self.resource_interval_min, self.nrel_api_email)  # noqa: E501
             data_url = data_base_url + data_query_url
             data_response = retry_session.get(data_url, verify=certifi.where())
 
@@ -584,24 +601,28 @@ class FetchResourceFiles():
             else:
                 try:
                     error_str = data_response.json()
-                except:
+                except:  # noqa: E722
                     error_str = data_response.content.decode("utf-8")
-                print('Unable to download file from URL {}.\nMessage from server: {}.'.format(data_url, error_str))
+                print(f'Unable to download file from URL {data_url}.'
+                      f'\nMessage from server: {error_str}.')
                 return
 
     def fetch(self, points):
         """
         Creates dict with {region:path_to_SAM_resource_file}.
 
-        :param iterable points: Iterable of lon/lat tuples, i.e. Shapely Points.
+        :param iterable points: Iterable of lon/lat tuples,
+            i.e. Shapely Points.
         """
         if self.verbose:
-            print('\nStarting data download for {} using {} thread workers.'.format(self.tech, self.workers))
+            print(f'\nStarting data download for {self.tech} using '
+                  f' {self.workers} thread workers.')
 
         # --- Initialize Session w/ retries ---
         if self.workers > 1:
             with cf.ThreadPoolExecutor(max_workers=self.workers) as executor:
-                futures = [executor.submit(self.data_function, job) for job in points]
+                futures = [
+                    executor.submit(self.data_function, job) for job in points]
                 results = [f.result() for f in futures]
 
         else:
@@ -612,4 +633,3 @@ class FetchResourceFiles():
         self.resource_file_paths = results
         self.resource_file_paths_dict = dict(zip(points, results))
         return self
-
