@@ -1,70 +1,7 @@
 diff --git a/ssc/cmod_belpe.cpp b/ssc/cmod_belpe.cpp
-index 137450ad9..e405dd6e9 100644
+index 137450ad9..30a1de96b 100644
 --- a/ssc/cmod_belpe.cpp
 +++ b/ssc/cmod_belpe.cpp
-@@ -52,7 +52,7 @@ static var_info _cm_vtab_belpe[] =
-     /*   VARTYPE			DATATYPE        NAME                LABEL								UNITS		META			GROUP                     REQUIRED_IF	CONSTRAINTS		UI_HINTS*/
-         { SSC_INPUT,		SSC_NUMBER,		"en_belpe",			"Enable building load calculator",	"0/1",		"","Load Profile Estimator", "*",			"BOOLEAN",		"" },
- 
--        // load is modified in BELPE. It is passed straight through 
-+        // load is modified in BELPE. It is passed straight through
-         // if BELPE is disabled, and subhourly loads can be pass through.
-         // but BELPE always runs hourly, at least for now....
-         { SSC_INOUT,		SSC_ARRAY,		"load",			    "Electricity load (year 1)",        "kW",	    "",			"Load Profile Estimator", "en_belpe=0",	 "",	 "" },
-@@ -160,7 +160,7 @@ public:
-         //		int c = 0; //8760 counter
-         monthly_sums(hourly, monthly);
-         for (int i = 0; i < 12; i++)
--            monthly[i] /= (util::nday[i] * 24); //divide the monthly sum by the number of hours in the month for an hourly average		
-+            monthly[i] /= (util::nday[i] * 24); //divide the monthly sum by the number of hours in the month for an hourly average
-     }
- 
- 
-@@ -200,7 +200,7 @@ public:
-             }
-         }
- 
--        // read weather file inputs 		
-+        // read weather file inputs
-         const char* file = as_string("solar_resource_file");
-         weatherfile wfile(file);
-         if (!wfile.ok()) throw exec_error("belpe", wfile.message());
-@@ -407,7 +407,7 @@ public:
- 
-         //This is the end of getting the air changes, for this part of the code
- 
--        //Default is stick frame construction. Renv started as defaults from Building America, based solely on age. 
-+        //Default is stick frame construction. Renv started as defaults from Building America, based solely on age.
-         // But then was scaled to fit BeOpt for the older case (R increase from 4 to 5)
-         // Windows are NOT separated out for conduction calcs but I put them here just in case (UWin)
-         double Renv, SHGC;
-@@ -498,7 +498,7 @@ public:
- //		double AIntTot = A_Wins + Aenv + AIntWall + AIntMass;
-         double Cair = 0.075 * 0.245 * V_bldg * 10; //BTU / degF  Note adjust factor of 10 --MJB
- 
--        //INTERNAL LOADS	
-+        //INTERNAL LOADS
-         double PerPersonLoad = 220 / 3412.142; //BTU / hr / person to kWh / person(BLDG America for single zone) --sensible only
-         //Divide into radiative and convective(heat transfer to mass vs.transfer to air)
- 
-@@ -680,7 +680,7 @@ public:
-         }
-         else
-         {
--            //n_heat = 0.65 
-+            //n_heat = 0.65
-             GasHeat_capacity = 40 * A_Floor / 1000;
-         };
- 
-@@ -731,7 +731,7 @@ public:
-             int i = j;
-             int iprev = i - 1;
-             int inext = i + 1;
--            bool flag = false; //flag to pre-set first hour ONLY the first time 
-+            bool flag = false; //flag to pre-set first hour ONLY the first time
-             if (i == 8759) //hour 8760
-                 inext = 0; //loop back to first hour
-             else if (i == 8760) //re-running first hour
 @@ -1027,7 +1027,7 @@ public:
          }
  
@@ -74,14 +11,10 @@ index 137450ad9..e405dd6e9 100644
          std::vector<double> monthly_diff(12), monthly_scale(12);
          //compute monthly load sums for scaling
          monthly_sums(load, monthly_load);
-@@ -1063,19 +1063,19 @@ public:
-             if (x_hvac[i] < -1) x_hvac[i] = -1;
-             //end new error checking from Sara
-             //xhvacdebug[i] = x_hvac[i];
--        }
-+        }*/
+@@ -1066,16 +1066,17 @@ public:
+         }
          //new error checking from Sara
--        std::vector<double> NewScale(12);
+         std::vector<double> NewScale(12);
 -        for (int z = 0; z < 12; z++)
 -        {
 -            NewScale[z] = (monthly_load[z] - monthly_util[z] * 1000 - x_hvac[z] * monthly_hvac_load[z]) / monthly_load[z]; //monthly utility is in kWh
@@ -92,10 +25,10 @@ index 137450ad9..e405dd6e9 100644
 -            monthlyhvac_lpgendebug[z] = monthly_hvac_load[z];
 -            */
 -        }
-+        //std::vector<double> NewScale(12);
++	*/
 +        //for (int z = 0; z < 12; z++)
 +        //{
-+        //    NewScale[z] = (monthly_load[z] - monthly_util[z] * 1000 - x_hvac[z] * monthly_hvac_load[z]) / //monthly_load[z]; //monthly utility is in kWh
++        //    NewScale[z] = (monthly_load[z] - monthly_util[z] * 1000 - x_hvac[z] * monthly_hvac_load[z]) / monthly_load[z]; //monthly utility is in kWh
 +        //    /*
 +        //    newscaledebug[z] = NewScale[z];
 +        //    monthlytotelecactualdebug[z] = monthly_util[z];
@@ -106,7 +39,7 @@ index 137450ad9..e405dd6e9 100644
          //end new error checking from Sara
  
          //loop through 8760 and scale according to what month it's in
-@@ -1083,7 +1083,7 @@ public:
+@@ -1083,13 +1084,14 @@ public:
          int nneg = 0;
          for (int i = 0; i < 8760; i++)
          {
@@ -115,12 +48,10 @@ index 137450ad9..e405dd6e9 100644
                  load[i] = (ssc_number_t)(load[i] * (1 - NewScale[month[i]]) - x_hvac[month[i]] * hvac_load[i]); //new from Sara 11/21
              else
                  load[i] = load[i] * (ssc_number_t)(1 - monthly_scale[month[i]]);
-@@ -1096,7 +1096,7 @@ public:
-             {
-                 load[i] = 0;
-                 nneg++;
--            }
-+            }*/
  
-             load[i] *= (ssc_number_t)0.001; // convert to kWh
-         }
+             if (monthly_util[month[i]] == 0) //set all loads for the month to zero if the input month was zero
+                 load[i] = 0;
++		*/
+ 
+ 
+             if (load[i] < 0) //error checking for negative loads
